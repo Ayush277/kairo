@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 330" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0f1117"/><stop offset="1" stop-color="#161a24"/></linearGradient>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z" fill="#8b93ff"/></marker>
+  </defs>
+  <rect width="1000" height="330" rx="18" fill="url(#bg)"/>
+  <text x="500" y="36" text-anchor="middle" fill="#e7e9ee" font-size="20" font-weight="700">The core idea: a temporal state diff</text>
+
+  <line x1="70" y1="110" x2="930" y2="110" stroke="#3a4060" stroke-width="3"/>
+  <circle cx="150" cy="110" r="11" fill="#8b93ff"/>
+  <circle cx="850" cy="110" r="11" fill="#4ade80"/>
+  <text x="150" y="82" text-anchor="middle" fill="#cfd4ff" font-size="15" font-weight="700">t₀ · Monday</text>
+  <text x="850" y="82" text-anchor="middle" fill="#bdf5d2" font-size="15" font-weight="700">t_now · today</text>
+  <text x="500" y="100" text-anchor="middle" fill="#7c8499" font-size="13">"since then"</text>
+
+  <rect x="40" y="140" width="290" height="150" rx="12" fill="#1c2038" stroke="#8b93ff"/>
+  <text x="185" y="166" text-anchor="middle" fill="#cfd4ff" font-size="14" font-weight="700">MEMORY(t₀): SQLite</text>
+  <text x="62" y="192" fill="#e7e9ee" font-size="13">Pipedrive · Advanced</text><text x="310" y="192" text-anchor="end" fill="#9aa3b5" font-size="13">$24 / user</text>
+  <text x="62" y="216" fill="#e7e9ee" font-size="13">Attio · Pro</text><text x="310" y="216" text-anchor="end" fill="#9aa3b5" font-size="13">$59 / seat</text>
+  <text x="62" y="240" fill="#e7e9ee" font-size="13">HubSpot · Professional</text><text x="310" y="240" text-anchor="end" fill="#9aa3b5" font-size="13">$90 / seat</text>
+  <text x="185" y="272" text-anchor="middle" fill="#7c8499" font-size="12">fact_snapshots, each with a source URL</text>
+
+  <rect x="670" y="140" width="290" height="150" rx="12" fill="#17261f" stroke="#4ade80"/>
+  <text x="815" y="166" text-anchor="middle" fill="#bdf5d2" font-size="14" font-weight="700">WEB(t_now): web_search</text>
+  <text x="692" y="192" fill="#e7e9ee" font-size="13">Parallel queries, one call</text>
+  <text x="692" y="216" fill="#e7e9ee" font-size="13">Official pricing pages read live</text>
+  <text x="692" y="240" fill="#e7e9ee" font-size="13">Tables kept, snippets not trusted</text>
+  <text x="815" y="272" text-anchor="middle" fill="#7c8499" font-size="12">one LLM round trip for all entities</text>
+
+  <path d="M330 215 H438" stroke="#8b93ff" stroke-width="2.5" marker-end="url(#a)"/>
+  <path d="M670 215 H562" stroke="#4ade80" stroke-width="2.5" marker-end="url(#a)"/>
+  <rect x="440" y="170" width="120" height="90" rx="12" fill="#2a2418" stroke="#fbbf24"/>
+  <text x="500" y="205" text-anchor="middle" fill="#fbbf24" font-size="20" font-weight="700">Δ</text>
+  <text x="500" y="228" text-anchor="middle" fill="#e7e9ee" font-size="13" font-weight="600">Then vs Now</text>
+  <text x="500" y="247" text-anchor="middle" fill="#9aa3b5" font-size="12">+ verdict</text>
+</svg>
