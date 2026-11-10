@@ -1,39 +1,37 @@
-# Kairo — Design
+# Kairo: design
 
-## 1. How It Works
+## How it works
 
-The challenge's example prompts ("On Monday we shortlisted 5 CRM tools… has any changed since?", "What did I ask you on 3 November? Is your answer still correct today?", "Last Tuesday I asked about Postgres hosting… any pricing change since?") are not stateless web searches. They are **temporal state-diffing queries**: `Memory(t₀) × WebSearch(t_now) → Delta`. An agent needs a precise record of what it said at t₀ and a fast way to re-check it now, all behind **one tool: `web_search`**.
+The example prompts ("On Monday we shortlisted 5 CRM tools… anything changed since?", "What did I ask you on 3 November? Still correct today?") are not web searches. They are **state diffs**: `what I said at t₀` vs `what is true now`. So the agent needs an exact record of its past claims, a fast live check, and one tool: `web_search`.
 
 ```
-user prompt ─▶ ① Pre-flight hydrator ─▶ ② LLM + single web_search tool ─▶ stream to user
-                 (in-process, ~ms)         (parallel queries + deep read)        │
-                                                                                 ▼
-                                                      ③ async fact-ledger extractor (after `done`)
+prompt ─▶ 1. Hydrate (SQLite, in-process) ─▶ 2. LLM + web_search ─▶ stream answer
+                                                                        └─▶ 3. Extract facts (async, after `done`)
 ```
 
-1. **Pre-flight temporal & episodic hydrator** (`memory/`). `temporal-resolver.ts` turns "On Monday", "last Tuesday" (primary + prior-week fallback), "3 November", "yesterday", "N days ago", "since …" into concrete local-date windows relative to `now` (or a simulated `asOf`). `context-assembler.ts` queries the indexed `date_bucket` in SQLite, falls back to FTS5/BM25 keyword recall when there is no date, attaches the `fact_snapshots` recorded on those turns, and injects an `<episodic_memory>` block into the system prompt. If nothing matches, it injects a `<no_match>` note listing the dates that do have history, so the model cannot invent a past conversation.
-2. **Single-tool parallel search & deep pricing reader** (`tools/`). `web_search` takes up to 5 `queries`, runs them with `Promise.allSettled` and an 8 s per-query timeout, de-duplicates URLs, and ranks official/pricing/changelog pages above review listicles. In `pricing_or_changelog` mode it fetches the best official page per query (max 4, in parallel), strips chrome, and keeps tables, headings and price lines as compact Markdown, so the model sees real tiers rather than 160-character snippets. Providers: Tavily → Serper → Exa, with a zero-key DuckDuckGo→Bing chain and Jina Reader for JS-heavy pages.
-3. **Post-turn fact snapshot extractor** (`fact-extractor.ts`). After the `done` event, a cheap model parses the answer into `(entity, attribute, value, source_url)` rows linked to the assistant message and date. It is off the critical path, so it adds no user-visible latency, and it is what makes tomorrow's "what did I claim then?" a lookup instead of a re-read.
+1. **Hydrate before the model runs.** A deterministic resolver (plain date math, tested across several "today" values) turns "Monday", "last Tuesday", "3 November", "yesterday", "N days ago", "since…" into date windows. "Last Tuesday" also keeps the prior week's Tuesday as a fallback. Those windows hit an indexed `date_bucket` in SQLite; with no date, FTS5/BM25 keyword recall takes over. The matching past turns plus their **fact snapshots** are injected as `<episodic_memory>`. If nothing matches, the model is told which dates *do* have history, so it can't invent a past chat.
+2. **One tool, built for batching.** `web_search` takes up to 5 queries and runs them concurrently (8 s timeout each, failures tolerated), dedupes URLs, and ranks official pricing/changelog pages above review listicles. In pricing/changelog mode it also reads the best official page per query and compresses it to Markdown that keeps tables and price lines. Providers: Tavily, Serper, Exa, or a no-key Bing/DuckDuckGo chain.
+3. **Ledger after the answer.** Once `done` is sent, a cheap model extracts `(entity, attribute, value, source)` rows linked to the message. Tomorrow's "what did I claim then?" is a lookup, and it costs the user no latency.
 
-## 2. Why I Built It This Way
+## Why this way
 
-- **Memory lives in the runtime, not as a second LLM tool.** "It has one tool: web search" is honoured literally (the tool list sent to the model contains exactly one entry, and a test asserts it), and recall costs zero extra model round trips because it is resolved before the first token is requested.
-- **Batched queries inside one tool call.** Verifying five CRMs or five Postgres hosts as sequential tool calls costs one LLM round trip per entity; one call with `queries: string[]` costs one. Measured on the zero-key path: two queries plus two deep page reads complete in about 1 s end to end.
-- **Deep-read pricing pages.** Snippets routinely omit seat minimums, compute add-ons and usage-based tiers, which produces false "no change" verdicts. Reading the official page and keeping every price/plan/limit line prevents that. (The first live read showed Neon's tiers already differ from the seeded baseline, which a snippet would likely have missed.)
-- **A fact ledger beside raw transcripts.** Diffing needs the *claims*, not prose; structured rows let the agent produce a Then-vs-Now table and cite the original source.
-- **Deterministic time.** Date resolution is plain date math (tested across several "today" values, including the same-date collision where last Tuesday *is* 3 November), not an LLM guess. A simulated clock (`asOf`) makes the benchmark testable at any time.
+- **Memory is runtime, not a second tool.** "One tool" holds literally (a test asserts the model sees only `web_search`), and recall costs no extra model round trip.
+- **Batch inside the tool.** Checking five vendors one call at a time costs five model round trips; a batched call costs one. Measured on the no-key path: 2 queries + 2 full page reads ≈ 1 s.
+- **Read the page, not the snippet.** Snippets drop seat minimums and usage tiers, which yields false "no change" verdicts. A live read of Neon's pricing page already disagrees with my seeded baseline.
+- **Structured facts beat transcripts.** A diff needs claims, not prose; rows give a clean Then-vs-Now table with the original source.
+- **Time is testable.** A simulated clock lets anyone backdate a message and test "since then" immediately.
 
-## 3. What I Considered and Rejected
+## Considered and rejected
 
-- **Vector DB for memory.** Temporal queries and exact entity names need B-tree date lookups and BM25; embeddings blur dates and add infrastructure. SQLite + FTS5 is one file, no service.
-- **Multi-agent planner/critic.** Adds seconds of time-to-first-token and tokens; a well-built pre-flight context plus one parallel tool loop gets the answer in a single pass.
-- **Headless browser for every search.** Cold-start cost is too high for the default path; HTTP + DOM stripping is fast, with Jina Reader as the JS-rendered fallback.
-- **Memory as an LLM tool.** Violates the one-tool constraint and costs a round trip.
+- **Vector DB:** blurs dates and exact names; B-tree date lookup + BM25 is exact and one file.
+- **Planner/critic agents:** add seconds to first token for no gain here.
+- **Headless browser per search:** too slow by default; HTTP + DOM stripping, Jina Reader as the JS fallback.
+- **Memory as a tool:** breaks "one tool" and adds a round trip.
 
-## 4. What I'd Do With Another Week
+## With another week
 
-- **Content-hash watchers:** hash normalised pricing DOM subtrees of cited URLs and detect byte-level changes without an LLM, enabling proactive "this page changed" alerts.
-- **Playwright worker pool** for SPA pricing calculators that hydrate tiers client-side.
-- **Source-contradiction resolver:** when a blog disagrees with the vendor's live `/pricing`, automatically fetch a tiebreaker and say which one wins.
-- **Evaluation harness:** replay 50 multi-session traces scoring temporal-recall precision, citation faithfulness and p95 latency; track regressions in CI.
-- **Known limits today:** seeded baselines are illustrative, not historically verified; time-travel backdates *messages*, not the web; fact extraction quality depends on the fast model.
+- **Evals:** replay 50 multi-session traces; score recall precision, citation faithfulness, p95 latency. *Not yet measured: answer quality with a live model; I have only tested the loop with a scripted LLM.*
+- **Page-hash watchers** for byte-level change detection without an LLM.
+- **Playwright pool** for client-rendered pricing calculators.
+- **Conflict resolver:** when a blog contradicts the vendor's `/pricing`, fetch a tiebreaker and say which wins.
+- **Honesty fix:** label demo-seed episodes in answers; seeded prices are illustrative baselines.
