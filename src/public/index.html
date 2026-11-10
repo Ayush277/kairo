@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kairo</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><span class="logo">◐</span> Kairo <span class="muted small" id="engine"></span></div>
+    <div class="actions">
+      <button id="newChat" class="ghost" title="Start a new conversation">New chat</button>
+      <button id="openDrawer" class="ghost" title="Cmd/Ctrl+K">⏱ Timeline &amp; Seed Manager</button>
+    </div>
+  </header>
+
+  <main id="chat" class="chat" aria-live="polite">
+    <section id="empty" class="empty">
+      <h1>Ask about things that may have changed.</h1>
+      <p class="muted">Kairo remembers your past conversations by date and checks them against the live web.</p>
+      <div class="chips" id="chips"></div>
+    </section>
+  </main>
+
+  <footer class="composer">
+    <div id="simBanner" class="sim hidden"></div>
+    <form id="form">
+      <textarea id="input" rows="1" placeholder="Message Kairo…  (Enter to send, Shift+Enter for newline)" autofocus></textarea>
+      <button id="send" type="submit">Send</button>
+    </form>
+  </footer>
+
+  <aside id="drawer" class="drawer hidden" aria-label="Timeline and seed manager">
+    <div class="drawer-head">
+      <strong>Timeline &amp; Seed Manager</strong>
+      <button id="closeDrawer" class="ghost">Esc ✕</button>
+    </div>
+    <nav class="tabs">
+      <button data-tab="timeline" class="active">Timeline</button>
+      <button data-tab="simulate">Simulate date</button>
+      <button data-tab="manage">Seed &amp; reset</button>
+    </nav>
+
+    <div class="tab" id="tab-timeline">
+      <div id="days" class="days"></div>
+      <div id="dayDetail" class="detail"></div>
+    </div>
+
+    <div class="tab hidden" id="tab-simulate">
+      <p class="muted">Backdate your next messages to test temporal memory live. Messages are stored with this timestamp; web results still reflect the real present.</p>
+      <label class="field">Send as of
+        <input type="datetime-local" id="asOfInput" />
+      </label>
+      <div class="row">
+        <button id="asOfApply">Use for next messages</button>
+        <button id="asOfClear" class="ghost">Back to now</button>
+      </div>
+      <div class="row wrap" id="asOfQuick"></div>
+      <p class="muted small">Tip: send “Compare Supabase and Neon pricing” as of 3 days ago, clear the simulation, then ask “Has any of that changed since then?”.</p>
+    </div>
+
+    <div class="tab hidden" id="tab-manage">
+      <p class="muted">The benchmark seeder plants three conversations anchored to today’s calendar: last Monday (5 CRM tools), the most recent 3 November, and last Tuesday (Postgres hosting). Seed figures are illustrative baselines.</p>
+      <div class="row wrap">
+        <button id="reseed">Re-seed benchmark episodes</button>
+        <button id="resetSeed" class="ghost">Reset &amp; re-seed</button>
+        <button id="resetAll" class="danger">Reset to clean slate</button>
+      </div>
+      <pre id="statusBox" class="statusbox"></pre>
+    </div>
+  </aside>
+
+  <script src="/app.js" type="module"></script>
+</body>
+</html>

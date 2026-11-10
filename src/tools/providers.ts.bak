@@ -1,0 +1,210 @@
+import { load } from "cheerio";
+import { config } from "../config.js";
+
+export type SearchTopic = "general" | "news" | "pricing_or_changelog";
+
+export interface SearchHit {
+  title: string;
+  url: string;
+  snippet: string;
+  publishedDate?: string;
+}
+
+export interface SearchOptions {
+  topic: SearchTopic;
+  daysBack?: number;
+  maxResults: number;
+  signal: AbortSignal;
+}
+
+export interface SearchProvider {
+  name: string;
+  search(query: string, opts: SearchOptions): Promise<SearchHit[]>;
+}
+
+const UA = "Mozilla/5.0 (compatible; KairoBot/1.0) AppleWebKit/537.36 Chrome/124 Safari/537.36";
+
+/** Map a day count onto the coarse buckets most search APIs support. */
+const bucket = (days: number): "day" | "week" | "month" | "year" =>
+  days <= 1 ? "day" : days <= 7 ? "week" : days <= 31 ? "month" : "year";
+
+async function json<T>(res: Response, label: string): Promise<T> {
+  if (!res.ok) throw new Error(`${label} HTTP ${res.status}: ${(await res.text()).slice(0, 160)}`);
+  return (await res.json()) as T;
+}
+
+const tavily = (apiKey: string): SearchProvider => ({
+  name: "tavily",
+  async search(query, o) {
+    const body: Record<string, unknown> = { query, search_depth: "basic", max_results: o.maxResults, include_answer: false };
+    if (o.topic === "news") {
+      body.topic = "news";
+      if (o.daysBack) body.days = Math.min(o.daysBack, 365);
+    } else if (o.daysBack) body.time_range = bucket(o.daysBack);
+    const res = await fetch("https://api.tavily.com/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify(body),
+      signal: o.signal,
+    });
+    const data = await json<{ results?: { title: string; url: string; content: string; published_date?: string }[] }>(res, "Tavily");
+    return (data.results ?? []).map((r) => ({ title: r.title, url: r.url, snippet: r.content, publishedDate: r.published_date }));
+  },
+});
+
+const serper = (apiKey: string): SearchProvider => ({
+  name: "serper",
+  async search(query, o) {
+    const body: Record<string, unknown> = { q: query, num: o.maxResults };
+    if (o.daysBack) body.tbs = `qdr:${bucket(o.daysBack)[0]}`;
+    const res = await fetch(o.topic === "news" ? "https://google.serper.dev/news" : "https://google.serper.dev/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-API-KEY": apiKey },
+      body: JSON.stringify(body),
+      signal: o.signal,
+    });
+    const data = await json<{
+      organic?: { title: string; link: string; snippet?: string; date?: string }[];
+      news?: { title: string; link: string; snippet?: string; date?: string }[];
+    }>(res, "Serper");
+    return [...(data.organic ?? []), ...(data.news ?? [])].map((r) => ({
+      title: r.title,
+      url: r.link,
+      snippet: r.snippet ?? "",
+      publishedDate: r.date,
+    }));
+  },
+});
+
+const exa = (apiKey: string): SearchProvider => ({
+  name: "exa",
+  async search(query, o) {
+    const body: Record<string, unknown> = {
+      query,
+      numResults: o.maxResults,
+      type: "auto",
+      contents: { text: { maxCharacters: 1200 } },
+    };
+    if (o.topic === "news") body.category = "news";
+    if (o.daysBack) body.startPublishedDate = new Date(Date.now() - o.daysBack * 86_400_000).toISOString();
+    const res = await fetch("https://api.exa.ai/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-key": apiKey },
+      body: JSON.stringify(body),
+      signal: o.signal,
+    });
+    const data = await json<{ results?: { title?: string; url: string; text?: string; publishedDate?: string }[] }>(res, "Exa");
+    return (data.results ?? []).map((r) => ({
+      title: r.title ?? r.url,
+      url: r.url,
+      snippet: (r.text ?? "").replace(/\s+/g, " ").slice(0, 400),
+      publishedDate: r.publishedDate,
+    }));
+  },
+});
+
+/** Zero-key fallback: DuckDuckGo's HTML endpoint. */
+const duckduckgo = (): SearchProvider => ({
+  name: "duckduckgo",
+  async search(query, o) {
+    const params = new URLSearchParams({ q: query });
+    if (o.daysBack) params.set("df", bucket(o.daysBack)[0] as string);
+    const res = await fetch(`https://html.duckduckgo.com/html/?${params}`, {
+      headers: { "User-Agent": UA, Accept: "text/html", "Accept-Language": "en-US,en;q=0.9" },
+      signal: o.signal,
+    });
+    if (!res.ok) throw new Error(`DuckDuckGo HTTP ${res.status}`);
+    const $ = load(await res.text());
+    const hits: SearchHit[] = [];
+    $(".result").each((_, el) => {
+      const a = $(el).find("a.result__a").first();
+      const href = a.attr("href");
+      if (!href) return;
+      let url = href.startsWith("//") ? `https:${href}` : href;
+      try {
+        const u = new URL(url);
+        if (u.hostname.endsWith("duckduckgo.com") && u.searchParams.get("uddg")) url = u.searchParams.get("uddg") as string;
+        if (u.hostname.endsWith("duckduckgo.com") && u.pathname === "/y.js") return; // ad
+      } catch {
+        return;
+      }
+      hits.push({ title: a.text().trim(), url, snippet: $(el).find(".result__snippet").text().trim() });
+    });
+    if (!hits.length && /anomaly|captcha|challenge/i.test($.text())) throw new Error("DuckDuckGo asked for a CAPTCHA (rate limited)");
+    return hits.slice(0, o.maxResults);
+  },
+});
+
+
+/** Second zero-key fallback: Bing's HTML results (DuckDuckGo often CAPTCHAs automated clients). */
+const bing = (): SearchProvider => ({
+  name: "bing",
+  async search(query, o) {
+    const params = new URLSearchParams({ q: query, setlang: "en-US" });
+    if (o.daysBack) params.set("filters", `ex1:"ez${o.daysBack <= 1 ? 1 : o.daysBack <= 7 ? 2 : o.daysBack <= 31 ? 3 : 5}"`);
+    const res = await fetch(`https://www.bing.com/search?${params}`, {
+      headers: { "User-Agent": UA, Accept: "text/html", "Accept-Language": "en-US,en;q=0.9" },
+      signal: o.signal,
+    });
+    if (!res.ok) throw new Error(`Bing HTTP ${res.status}`);
+    const $ = load(await res.text());
+    const hits: SearchHit[] = [];
+    $("li.b_algo").each((_, el) => {
+      const a = $(el).find("h2 a").first();
+      let url = a.attr("href") ?? "";
+      // Bing wraps results as /ck/a?...&u=a1<base64url>
+      try {
+        const u = new URL(url, "https://www.bing.com");
+        const enc = u.searchParams.get("u");
+        if (u.pathname.startsWith("/ck/") && enc?.startsWith("a1")) url = Buffer.from(enc.slice(2), "base64url").toString("utf8");
+      } catch {
+        return;
+      }
+      if (!/^https?:\/\//.test(url)) return;
+      hits.push({ title: a.text().trim(), url, snippet: $(el).find(".b_caption p, .b_lineclamp2, .b_lineclamp3").first().text().trim() });
+    });
+    return hits.slice(0, o.maxResults);
+  },
+});
+
+/** Zero-key chain: DuckDuckGo first, Bing if DuckDuckGo errors or is empty. */
+const freeWeb = (): SearchProvider => {
+  const chain = [duckduckgo(), bing()];
+  return {
+    name: "duckduckgo",
+    async search(query, o) {
+      let last: Error | null = null;
+      for (const p of chain) {
+        try {
+          const hits = await p.search(query, o);
+          if (hits.length) return hits;
+        } catch (err) {
+          last = err as Error;
+        }
+      }
+      if (last) throw last;
+      return [];
+    },
+  };
+};
+
+/** Primary provider with an automatic DuckDuckGo fallback if it errors or returns nothing. */
+export function createSearchProvider(): SearchProvider {
+  const { provider, apiKey } = config.search;
+  const primary =
+    provider === "tavily" ? tavily(apiKey!) : provider === "serper" ? serper(apiKey!) : provider === "exa" ? exa(apiKey!) : freeWeb();
+  if (primary.name === "duckduckgo") return primary;
+  const fallback = freeWeb();
+  return {
+    name: primary.name,
+    async search(query, o) {
+      try {
+        const hits = await primary.search(query, o);
+        if (hits.length) return hits;
+      } catch (err) {
+        console.warn(`[search] ${primary.name} failed (${(err as Error).message}); falling back to DuckDuckGo`);
+      }
+      return fallback.search(query, o);
+    },
+  };
+}
