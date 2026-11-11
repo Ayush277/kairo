@@ -7,29 +7,40 @@
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
-  <header class="top">
-    <div class="brand"><span class="logo">◐</span> Kairo <span class="muted small" id="engine"></span></div>
-    <div class="actions">
-      <button id="newChat" class="ghost" title="Start a new conversation">New chat</button>
-      <button id="openDrawer" class="ghost" title="Cmd/Ctrl+K">⏱ Timeline &amp; Seed Manager</button>
-    </div>
-  </header>
+  <div class="app">
+    <aside class="side" id="side">
+      <div class="brand"><span class="logo">◐</span><span>Kairo</span></div>
+      <button id="newChat" class="newchat">＋ New chat</button>
 
-  <main id="chat" class="chat" aria-live="polite">
-    <section id="empty" class="empty">
-      <h1>Ask about things that may have changed.</h1>
-      <p class="muted">Kairo remembers your past conversations by date and checks them against the live web.</p>
-      <div class="chips" id="chips"></div>
+      <div class="side-label">Memory <span class="muted small">by day</span></div>
+      <div id="sideDays" class="sidedays"></div>
+
+      <div class="side-foot">
+        <button class="sidelink" id="goSimulate">⏪ Simulate a date</button>
+        <button class="sidelink" id="goManage">🌱 Seed &amp; reset</button>
+        <div class="engine" id="engine">connecting…</div>
+      </div>
+    </aside>
+
+    <section class="main">
+      <header class="top">
+        <button id="toggleSide" class="ghost icon" title="Toggle sidebar">☰</button>
+        <div class="top-title">One tool. Memory that understands time.</div>
+        <button id="openDrawer" class="ghost" title="Cmd/Ctrl+K">⏱ Timeline &amp; Seed Manager <kbd>⌘K</kbd></button>
+      </header>
+
+      <main id="chat" class="chat" aria-live="polite"></main>
+
+      <footer class="composer">
+        <div id="simBanner" class="sim hidden"></div>
+        <form id="form">
+          <textarea id="input" rows="1" placeholder="Ask about something that may have changed…" autofocus></textarea>
+          <button id="send" type="submit" aria-label="Send">↑</button>
+        </form>
+        <div class="hint muted small">Enter to send · Shift+Enter for a new line · answers cite live sources</div>
+      </footer>
     </section>
-  </main>
-
-  <footer class="composer">
-    <div id="simBanner" class="sim hidden"></div>
-    <form id="form">
-      <textarea id="input" rows="1" placeholder="Message Kairo…  (Enter to send, Shift+Enter for newline)" autofocus></textarea>
-      <button id="send" type="submit">Send</button>
-    </form>
-  </footer>
+  </div>
 
   <aside id="drawer" class="drawer hidden" aria-label="Timeline and seed manager">
     <div class="drawer-head">
@@ -70,6 +81,7 @@
       <pre id="statusBox" class="statusbox"></pre>
     </div>
   </aside>
+  <div id="scrim" class="scrim hidden"></div>
 
   <script src="/app.js" type="module"></script>
 </body>
