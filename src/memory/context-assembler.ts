@@ -14,6 +14,8 @@ export interface AssembledContext {
   resolution: TemporalResolution;
   messageCount: number;
   factCount: number;
+  /** The fact snapshots injected into the block (the "then" side of a diff). */
+  facts: FactRow[];
 }
 
 const MAX_MESSAGES = 16;
@@ -113,7 +115,7 @@ export function assembleContext(store: Store, userText: string, now: Date): Asse
         }. Say so plainly; do not invent a past conversation.</no_match>\n</episodic_memory>`
       : null;
     if (block) notes.push({ icon: "🗂️", text: `No history on that date · memory holds ${dates.length} day(s)` });
-    return { block, notes, resolution, messageCount: 0, factCount: 0 };
+    return { block, notes, resolution, messageCount: 0, factCount: 0, facts: [] };
   }
 
   notes.push({
@@ -127,6 +129,7 @@ export function assembleContext(store: Store, userText: string, now: Date): Asse
     resolution,
     messageCount: messages.length,
     factCount: facts.length,
+    facts,
   };
 }
 

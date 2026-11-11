@@ -41,6 +41,7 @@ Everything is optional except one LLM key. Blank values and `...` placeholders a
 | `TAVILY_API_KEY` | Search provider (recommended) | none |
 | `SERPER_API_KEY` | Search provider | none |
 | `EXA_API_KEY` | Search provider | none |
+| `KAIRO_PREFETCH` | `off` disables speculative prefetch (for latency A/B tests) | `on` |
 | `PORT` | HTTP port | `3000` |
 
 **Search provider order:** Tavily → Serper → Exa, whichever key is present. With no search key, Kairo falls back to a free DuckDuckGo/Bing chain (plus Jina Reader for JavaScript-heavy pages). That works for demos, but a real key is more reliable because free endpoints may rate-limit or show CAPTCHAs.
@@ -75,8 +76,9 @@ Open it from the header or with `Cmd/Ctrl + K`.
 ## How a turn flows
 
 1. **Hydrate:** dates in your message ("Monday", "last Tuesday", "3 November", "since…") are resolved with date math, and the matching past turns plus their stored facts are injected into the prompt.
-2. **Search and answer:** the model gets one tool and can run up to 5 searches in parallel, deep-reading official pricing pages. The answer streams back with citations.
-3. **Ledger:** after the answer is sent, a background pass records the claims (entity, attribute, value, source) for future comparisons.
+2. **Prefetch (verification questions):** if memory already names the entities, the runtime runs the batched search before the model starts, saving a model round trip.
+3. **Search and answer:** the model gets one tool and can run up to 5 searches in parallel, deep-reading official pricing pages. The answer streams back with citations.
+4. **Ledger:** after the answer is sent, a background pass records the claims (entity, attribute, value, source) for future comparisons.
 
 ## Project layout
 
@@ -86,6 +88,7 @@ src/
 ├── config.ts                  Env parsing and provider selection
 ├── agent/
 │   ├── orchestrator.ts        Streaming loop; the model is offered one tool
+│   ├── prefetch.ts            Plans the speculative batched search from remembered entities
 │   ├── prompts.ts             System prompt: date grounding + verification protocol
 │   └── llm.ts                 Anthropic and OpenAI streaming adapters
 ├── memory/
@@ -100,7 +103,7 @@ src/
 │   ├── providers.ts           Tavily / Serper / Exa / free fallback
 │   └── page-reader.ts         HTML → compact Markdown (tables and prices kept)
 └── public/                    Zero-build UI (index.html, styles.css, app.js)
-test/                          24 tests; no API keys needed
+test/                          33 tests; no API keys needed
 docs/                          Architecture diagrams used in the docs
 ```
 

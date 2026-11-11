@@ -37,7 +37,7 @@
   <text x="655" y="120" text-anchor="middle" fill="#e7e9ee" font-size="16" font-weight="650">LLM + single web_search tool</text>
   <rect x="540" y="140" width="230" height="56" rx="9" fill="#1d2a2a" stroke="#2f4a42"/>
   <text x="655" y="164" text-anchor="middle" fill="#e7e9ee" font-size="14" font-weight="600">Streaming model turn</text>
-  <text x="655" y="183" text-anchor="middle" fill="#9aa3b5" font-size="12.5">Anthropic or OpenAI</text>
+  <text x="655" y="183" text-anchor="middle" fill="#9aa3b5" font-size="12.5">⚡ starts with prefetched results</text>
   <rect x="540" y="208" width="230" height="62" rx="9" fill="#1d2a2a" stroke="#2f4a42"/>
   <text x="655" y="232" text-anchor="middle" fill="#e7e9ee" font-size="14" font-weight="600">≤ 5 queries in parallel</text>
   <text x="655" y="252" text-anchor="middle" fill="#9aa3b5" font-size="12.5">allSettled · 8 s timeout each</text>

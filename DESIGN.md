@@ -21,6 +21,7 @@
 | Stage | Runs | What happens | Where |
 |---|---|---|---|
 | **1 · Hydrate** | before the model, in-process | Resolve dates → query SQLite by day (else FTS5/BM25) → attach `fact_snapshots` → inject `<episodic_memory>` | `src/memory/` |
+| **1b · Prefetch** | before the model, only for "did it change?" prompts | Memory already names the entities, so the runtime runs the batched search itself and hands the model a completed tool result (**no tool-decision round trip**) | `src/agent/prefetch.ts` |
 | **2 · Search & answer** | streamed | Model calls `web_search` (≤ 5 parallel queries, deep-read official pricing pages) and writes a Then-vs-Now answer with citations | `src/agent/`, `src/tools/` |
 | **3 · Ledger** | after `done`, async | A cheap model extracts `(entity, attribute, value, source)` rows linked to the answer | `src/memory/fact-extractor.ts` |
 
@@ -30,22 +31,27 @@ sequenceDiagram
     actor U as User
     participant S as Server (SSE)
     participant M as Memory (SQLite)
-    participant L as LLM
     participant W as web_search
+    participant L as LLM
     U->>S: "On Monday we shortlisted 5 CRMs… changed since?"
     S->>M: resolve "Monday" → 2026-11-09, fetch turns + fact snapshots
-    M-->>S: episodic_memory block
+    M-->>S: episodic_memory block + 5 remembered entities
     S-->>U: status pills (what was resolved and recalled)
-    S->>L: system prompt (date + memory) + one tool
-    L->>W: queries[5], topic=pricing_or_changelog
+    Note over S,W: Speculative prefetch: no LLM call has happened yet
+    S->>W: queries[5] built from the entities, pricing_or_changelog
     par concurrent
         W->>W: search ×5 (8 s timeout each)
     and
         W->>W: read ≤ 4 official pricing pages
     end
-    W-->>L: ranked results + page Markdown
+    W-->>S: ranked results + page Markdown
+    S->>L: system prompt + memory + completed web_search exchange
     L-->>U: streamed Then-vs-Now table + verdict
-    S-->>U: done (timings)
+    opt gaps the prefetch did not cover
+        L->>W: one more web_search
+        W-->>L: results
+    end
+    S-->>U: done (timings, prefetched = true)
     S--)M: async: extract facts into fact_snapshots
 ```
 
@@ -53,6 +59,7 @@ sequenceDiagram
 
 - **Memory lives in the runtime, not a second tool.** "One tool: web search" is honoured literally (a test asserts the model is offered only `web_search`), and recall costs **no extra model round trip**: it is finished before the first token is requested.
 - **Batching lives inside the tool.** Verifying five vendors with one tool call per vendor costs five model round trips. One call with `queries: string[]` costs one. Measured on the no-key path: 2 queries + 2 full page reads ≈ **1 s** end to end.
+- **Speculative prefetch removes a round trip.** Normally the model must first decide *what* to search, emit a tool call, and only then does the search start. For "did X change?" prompts memory already names the entities, so the runtime plans one query per entity (`<entity> pricing <year>`), runs the batched search *before* the first model call, and gives the model the result as a finished tool exchange. The model keeps the tool for gaps, and a failed or empty prefetch silently falls back to the normal loop. It can be switched off (`KAIRO_PREFETCH=off`) to A/B the latency. *The gain is by construction (one fewer sequential model call); I have not yet measured it against a live model.*
 - **Read the page, not the snippet.** Snippets drop seat minimums, usage tiers and compute add-ons, which creates false "no change" verdicts. A live read of Neon's pricing page already disagrees with the seeded baseline, which a snippet would likely have missed.
 - **Structured facts beat transcripts.** A diff needs *claims*; rows with a source URL make a clean Then-vs-Now table and an auditable citation.
 - **Time is deterministic and testable.** Date resolution is plain date math, not an LLM guess, and a simulated clock lets anyone backdate a message and test "since then" immediately.
@@ -64,12 +71,13 @@ sequenceDiagram
 | **Vector DB for memory** | Blurs dates and exact names. B-tree date lookup + BM25 is exact, instant, and a single file. |
 | **Memory as a 2nd LLM tool** | Breaks "one tool" and adds a model round trip per turn. |
 | **Planner / critic agents** | Seconds of extra time-to-first-token and tokens; one parallel tool loop answers in a single pass. |
+| **Letting the model always plan the search** | Costs a sequential model call when memory already knows the entities; kept only as the fallback and for gaps. |
 | **Headless browser per search** | Too slow as the default path; HTTP + DOM stripping first, Jina Reader as the JS-rendered fallback. |
 | **LLM-based date parsing** | Non-deterministic and slow; "last Tuesday" must be right every time. |
 
 ## 4 · What I'd do with another week
 
-- **Evaluation harness:** replay ~50 multi-session traces and score temporal-recall precision, citation faithfulness and p95 latency, tracked in CI. *Not yet measured: answer quality with a live model. I have only exercised the loop with a scripted LLM.*
+- **Evaluation harness:** replay ~50 multi-session traces, A/B `KAIRO_PREFETCH` on/off and score temporal-recall precision, citation faithfulness and p95 latency, tracked in CI. *Not yet measured: answer quality with a live model. I have only exercised the loop with a scripted LLM.*
 - **Page-hash watchers:** hash normalised pricing DOM subtrees of cited URLs to detect changes with no LLM, enabling proactive alerts.
 - **Playwright worker pool** for client-rendered pricing calculators.
 - **Source-conflict resolver:** when a blog contradicts the vendor's `/pricing`, fetch a tiebreaker and say which wins.
@@ -240,6 +248,6 @@ The UI shows live "status pills" (resolved dates, recalled messages, parallel se
 
 - **Benchmark seeder:** on first boot, plants three conversations anchored to *today's* calendar (last Monday: 5 CRM tools · most recent 3 November: hosted-LLM pricing · last Tuesday: Postgres hosting) with fact snapshots, so the challenge prompts work on any date. Prices are illustrative baselines for the "then" side.
 - **Timeline & Seed Manager** (`Cmd/Ctrl+K`): browse stored days and facts, simulate sending a message *as of* a past date, re-seed, reset. `POST /api/debug/context` prints exactly what memory would be injected for a prompt.
-- **Tests (24, no API key needed):** resolver across several "today" values including Monday/Tuesday/Wednesday edge cases; the three benchmark prompts recall the right episode; same-date collision; FTS safety; one-tool guarantee; unknown-tool rejection; parallel search with partial failure; ranking; HTML → Markdown; time-travel round trip. They use a scripted LLM, so they verify the plumbing, not model quality.
+- **Tests (33, no API key needed):** prefetch planning and fallbacks (named vendor, pure recall, empty/failed search);  resolver across several "today" values including Monday/Tuesday/Wednesday edge cases; the three benchmark prompts recall the right episode; same-date collision; FTS safety; one-tool guarantee; unknown-tool rejection; parallel search with partial failure; ranking; HTML → Markdown; time-travel round trip. They use a scripted LLM, so they verify the plumbing, not model quality.
 
 </details>

@@ -5,19 +5,22 @@ import type { Source, Store } from "../memory/db.js";
 import { WEB_SEARCH_TOOL, type SearchProgress, type WebSearchRunner } from "../tools/web-search.js";
 import { config } from "../config.js";
 import type { LlmClient, ToolCall, Turn } from "./llm.js";
+import { planPrefetch } from "./prefetch.js";
 import { buildSystemPrompt } from "./prompts.js";
 
 export type AgentEvent =
   | { type: "status"; kind: "memory" | "search" | "read" | "info"; icon: string; text: string }
   | { type: "delta"; text: string }
   | { type: "sources"; sources: Source[] }
-  | { type: "done"; messageId: string; timings: { memoryMs: number; firstTokenMs: number | null; totalMs: number }; searches: number }
+  | { type: "done"; messageId: string; timings: { memoryMs: number; firstTokenMs: number | null; totalMs: number }; searches: number; prefetched: boolean }
   | { type: "error"; message: string };
 
 export interface AgentDeps {
   store: Store;
   llm: LlmClient | null;
   search: WebSearchRunner;
+  /** Speculative prefetch for verification questions (defaults to config.prefetch). */
+  prefetch?: boolean;
   /** Awaited-by-nobody background hook; exposed so tests can observe completion. */
   onBackgroundDone?: (p: Promise<unknown>) => void;
 }
@@ -66,13 +69,40 @@ export async function runTurn(deps: AgentDeps, req: TurnRequest, emit: (e: Agent
   );
   turns.push({ role: "user", text: req.text });
 
-  const system = buildSystemPrompt({ now, realNow, timezone: config.timezone, memoryBlock: ctx.block });
-
-  // ── Stage 2: tool loop ──
   let firstTokenMs: number | null = null;
   let answer = "";
   let searches = 0;
   const sources = new Map<string, Source>();
+
+  // ── Stage 1b: speculative prefetch. Memory already names the entities to verify, so run the batched search now
+  //    instead of paying an LLM round trip just to be told to run it. Failure is harmless: fall back to the normal loop.
+  let prefetched = false;
+  const plan = (deps.prefetch ?? config.prefetch) ? planPrefetch(ctx, req.text, now) : null;
+  if (plan) {
+    emit({ type: "status", kind: "search", icon: "⚡", text: `Speculative prefetch: ${plan.entities.length} remembered entit${plan.entities.length === 1 ? "y" : "ies"} → searching before the model starts` });
+    const call: ToolCall = {
+      id: `prefetch_${Date.now().toString(36)}`,
+      name: WEB_SEARCH_TOOL.name,
+      input: { queries: plan.queries, topic: "pricing_or_changelog" },
+    };
+    try {
+      const out = await search(call.input, (p) => emitProgress(p, emit), signal);
+      if (out.sources.length) {
+        for (const src of out.sources) if (!sources.has(src.url)) sources.set(src.url, src);
+        turns.push({ role: "assistant", text: "", toolCalls: [call] });
+        turns.push({ role: "tool", results: [{ id: call.id, name: call.name, content: out.content }] });
+        searches++;
+        prefetched = true;
+      } else emit({ type: "status", kind: "search", icon: "↩️", text: "Prefetch returned nothing usable; the model will search itself" });
+    } catch (err) {
+      if (signal?.aborted) return;
+      emit({ type: "status", kind: "search", icon: "↩️", text: `Prefetch failed (${(err as Error).message}); the model will search itself` });
+    }
+  }
+
+  const system = buildSystemPrompt({ now, realNow, timezone: config.timezone, memoryBlock: ctx.block, prefetched });
+
+  // ── Stage 2: tool loop ──
 
   try {
     for (let step = 0; step < MAX_STEPS; step++) {
@@ -112,7 +142,7 @@ export async function runTurn(deps: AgentDeps, req: TurnRequest, emit: (e: Agent
     sources: sourceList,
   });
   if (sourceList.length) emit({ type: "sources", sources: sourceList });
-  emit({ type: "done", messageId: reply.id, timings: { memoryMs, firstTokenMs, totalMs: Date.now() - started }, searches });
+  emit({ type: "done", messageId: reply.id, timings: { memoryMs, firstTokenMs, totalMs: Date.now() - started }, searches, prefetched });
 
   // ── Stage 3: asynchronous fact ledger extraction (fire-and-forget). ──
   const job = extractFacts(store, llm, {

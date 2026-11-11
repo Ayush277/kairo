@@ -177,7 +177,7 @@ async function send(text) {
     } else if (e.type === "done") {
       searches = e.searches;
       const t = e.timings;
-      el.querySelector(".meta").textContent = `memory ${t.memoryMs}ms · first token ${t.firstTokenMs ?? "–"}ms · total ${(t.totalMs / 1000).toFixed(1)}s · ${e.searches} search call${e.searches === 1 ? "" : "s"} · fact ledger updating in background`;
+      el.querySelector(".meta").textContent = `memory ${t.memoryMs}ms · first token ${t.firstTokenMs ?? "–"}ms · total ${(t.totalMs / 1000).toFixed(1)}s · ${e.searches} search call${e.searches === 1 ? "" : "s"}${e.prefetched ? " (⚡ prefetched)" : ""} · fact ledger updating in background`;
     } else if (e.type === "error") {
       answer.innerHTML += `<p class="err">${esc(e.message)}</p>`;
     }

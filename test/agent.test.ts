@@ -80,7 +80,7 @@ test("orchestrator: memory is hydrated pre-flight, one batched search, answer st
   const events: AgentEvent[] = [];
   // pricing mode would deep-read real URLs; the fake host names are unresolvable so reads fail fast and are tolerated.
   await runTurn(
-    { store, llm, search: createWebSearch(fakeProvider(log)), onBackgroundDone: (p) => (bg = p) },
+    { store, llm, search: createWebSearch(fakeProvider(log)), prefetch: false, onBackgroundDone: (p) => (bg = p) },
     { sessionId: "s1", text: "On Monday we shortlisted 5 CRM tools. Has any pricing changed since?" },
     (e) => events.push(e),
   );
@@ -122,7 +122,7 @@ test("time travel: a backdated message is stored on that day and later recalled"
   const llm = fakeLlm(() => ({ text: "Supabase Pro is $25/mo per project, as of then.", toolCalls: [] }));
   const search = createWebSearch(fakeProvider([]));
   const past = new Date(Date.now() - 3 * 86400000);
-  await runTurn({ store, llm, search }, { sessionId: "tt", text: "Compare Supabase and Neon pricing", asOf: past }, () => {});
+  await runTurn({ store, llm, search, prefetch: false }, { sessionId: "tt", text: "Compare Supabase and Neon pricing", asOf: past }, () => {});
   assert.equal(store.listDays().length, 1);
   const llm2 = fakeLlm(() => ({ text: "ok", toolCalls: [] }));
   await runTurn({ store, llm: llm2, search }, { sessionId: "tt2", text: "3 days ago I asked about Supabase. Has anything changed since?" }, () => {});

@@ -48,6 +48,8 @@ export const config = {
   port: Number(env("PORT") ?? 3000),
   dbPath: env("DB_PATH") ?? path.join(root, "data", "kairo.db"),
   publicDir: path.join(root, "src", "public"),
+  /** Speculative prefetch of live data for verification questions. Set KAIRO_PREFETCH=off to disable. */
+  prefetch: env("KAIRO_PREFETCH")?.toLowerCase() !== "off",
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   llm: resolveLlm(),
   search: resolveSearch(),
