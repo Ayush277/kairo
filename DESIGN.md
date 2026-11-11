@@ -1,6 +1,8 @@
 <div align="center">
 
-# ◐ Kairo — Design
+<img src="docs/logo.svg" alt="Kairo logo" width="72">
+
+# Kairo — Design
 
 **A chat agent with exactly one tool (`web_search`) and a memory that understands time.**
 

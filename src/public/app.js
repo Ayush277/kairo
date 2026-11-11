@@ -75,7 +75,7 @@ function scrollDown() { chat.scrollTop = chat.scrollHeight; }
 
 function renderEmpty() {
   chat.innerHTML = `<section id="empty" class="empty">
-    <div class="mark">◐</div>
+    <img class="mark" src="/logo.svg" alt="Kairo" />
     <h1>Ask about things that <span>may have changed.</span></h1>
     <p class="muted">Kairo remembers your past conversations by date, then checks them against the live web, with one tool and one batched search.</p>
     <div class="cards" id="cards"></div>
@@ -93,7 +93,7 @@ function addUser(text) {
   $("#empty")?.remove();
   const el = document.createElement("div");
   el.className = "msg user";
-  el.innerHTML = `${asOf ? `<div class="stamp">⏪ sent as of ${esc(asOf.replace("T", " "))}</div>` : ""}<div class="bubble"></div>`;
+  el.innerHTML = `${asOf ? `<div class="stamp">◷ sent as of ${esc(asOf.replace("T", " "))}</div>` : ""}<div class="bubble"></div>`;
   el.querySelector(".bubble").textContent = text;
   chat.appendChild(el);
   return el;
@@ -102,7 +102,7 @@ function addUser(text) {
 function addAssistant() {
   const el = document.createElement("div");
   el.className = "msg assistant";
-  el.innerHTML = `<div class="avatar">◐</div><div class="body">
+  el.innerHTML = `<img class="avatar" src="/logo.svg" alt="" /><div class="body">
     <details class="tracebox running" open><summary>Working…</summary><div class="trace"></div></details>
     <div class="answer"></div><div class="srcs"></div><div class="meta"></div></div>`;
   chat.appendChild(el);
@@ -279,7 +279,7 @@ function setAsOf(v) {
   const banner = $("#simBanner");
   if (asOf) {
     banner.classList.remove("hidden");
-    banner.innerHTML = `<span>⏪ Simulated clock: messages are sent as of <b>${esc(asOf.replace("T", " "))}</b></span><button class="ghost" id="bannerClear" type="button">Clear</button>`;
+    banner.innerHTML = `<span>◷ Simulated clock: messages are sent as of <b>${esc(asOf.replace("T", " "))}</b></span><button class="ghost" id="bannerClear" type="button">Clear</button>`;
     $("#bannerClear").addEventListener("click", () => setAsOf(null));
   } else banner.classList.add("hidden");
 }

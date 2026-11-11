@@ -4,20 +4,22 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Kairo</title>
+  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+  <meta name="theme-color" content="#050505" />
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
   <div class="app">
     <aside class="side" id="side">
-      <div class="brand"><span class="logo">◐</span><span>Kairo</span></div>
+      <div class="brand"><img class="logo" src="/logo.svg" alt="" /><span>Kairo</span></div>
       <button id="newChat" class="newchat">＋ New chat</button>
 
       <div class="side-label">Memory <span class="muted small">by day</span></div>
       <div id="sideDays" class="sidedays"></div>
 
       <div class="side-foot">
-        <button class="sidelink" id="goSimulate">⏪ Simulate a date</button>
-        <button class="sidelink" id="goManage">🌱 Seed &amp; reset</button>
+        <button class="sidelink" id="goSimulate">◷ Simulate a date</button>
+        <button class="sidelink" id="goManage">◈ Seed &amp; reset</button>
         <div class="engine" id="engine">connecting…</div>
       </div>
     </aside>
@@ -26,7 +28,7 @@
       <header class="top">
         <button id="toggleSide" class="ghost icon" title="Toggle sidebar">☰</button>
         <div class="top-title">One tool. Memory that understands time.</div>
-        <button id="openDrawer" class="ghost" title="Cmd/Ctrl+K">⏱ Timeline &amp; Seed Manager <kbd>⌘K</kbd></button>
+        <button id="openDrawer" class="ghost" title="Cmd/Ctrl+K">◷ Timeline &amp; Seed Manager <kbd>⌘K</kbd></button>
       </header>
 
       <main id="chat" class="chat" aria-live="polite"></main>

@@ -56,7 +56,7 @@ export async function runTurn(deps: AgentDeps, req: TurnRequest, emit: (e: Agent
   const ctx = assembleContext(store, req.text, now);
   const memoryMs = Date.now() - started;
   for (const n of ctx.notes) emit({ type: "status", kind: "memory", icon: n.icon, text: n.text });
-  if (req.asOf) emit({ type: "status", kind: "info", icon: "⏪", text: `Simulated clock: this message is sent as of ${formatClock(now)}` });
+  if (req.asOf) emit({ type: "status", kind: "info", icon: "◷", text: `Simulated clock: this message is sent as of ${formatClock(now)}` });
 
   // History is read before the new message is stored so a turn never recalls itself.
   const history = store.sessionMessages(req.sessionId, 12);
