@@ -212,7 +212,7 @@ async function loadHistory() {
 
 $("#newChat").addEventListener("click", () => {
   sessionId = crypto.randomUUID(); store.set("kairo.session", sessionId);
-  renderEmpty(); input.focus();
+  renderEmpty(); refreshStatus(); input.focus();
 });
 $("#toggleSide").addEventListener("click", () => $(".app").classList.toggle("collapsed"));
 
@@ -297,6 +297,16 @@ async function refreshStatus() {
   const s = await (await fetch("/api/status")).json();
   $("#engine").textContent = s.llm ? `${s.llm.provider} · ${s.llm.model}\nsearch: ${s.search}` : "⚠ No LLM key configured. Add one to .env";
   $("#engine").style.whiteSpace = "pre-line";
+  if (!s.llm) {
+    input.placeholder = "Add an API key to .env to chat (see the notice above)";
+    const hero = $("#empty");
+    if (hero && !hero.querySelector(".keynotice")) {
+      const n = document.createElement("div");
+      n.className = "keynotice";
+      n.innerHTML = `<b>API key needed to chat.</b> Open <code>.env</code> in the project root, set <code>ANTHROPIC_API_KEY</code> or <code>OPENAI_API_KEY</code>, then restart <code>npm run dev</code>. Memory, the timeline and the seed manager already work without one.`;
+      hero.querySelector("p").after(n);
+    }
+  }
   $("#statusBox").textContent = `today        ${s.today} (${s.timezone})\nllm          ${s.llm ? `${s.llm.provider}/${s.llm.model}` : "not configured"}\nsearch       ${s.search}\nmessages     ${s.messages}\nfact ledger  ${s.facts}`;
 }
 async function post(url, body) {

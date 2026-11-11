@@ -73,9 +73,15 @@ The full reasoning, rejected alternatives and diagrams are in **[DESIGN.md](DESI
 
 ```bash
 npm install
-cp .env.example .env     # add ONE LLM key (Anthropic or OpenAI)
+cp .env.example .env     # then open .env and paste your API key (see below)
 npm run dev              # → http://localhost:3000
 ```
+
+> [!IMPORTANT]
+> **You need one LLM API key to chat with Kairo.** Open the `.env` file in the project root and set **either**
+> `ANTHROPIC_API_KEY=sk-ant-...` **or** `OPENAI_API_KEY=sk-...`, then restart `npm run dev`.
+> Without a key the app still starts (you can browse memory, the timeline and the seed manager), but sending a message shows
+> *"No LLM key configured"*. A search key is **optional**; see [Configuration](#configuration).
 
 The server, the API (SSE streaming) and the UI run in a single process on one port. There is no build step.
 
@@ -83,19 +89,19 @@ The server, the API (SSE streaming) and the UI run in a single process on one po
 
 ## Configuration
 
-Only one LLM key is required. Blank values and `...` placeholders are ignored.
+Put every value in the **`.env`** file in the project root (copy it from `.env.example`). Blank values and `...` placeholders are ignored.
 
-| Variable | Purpose | Default |
-|---|---|---|
-| `ANTHROPIC_API_KEY` | Use Anthropic (checked first) | none |
-| `OPENAI_API_KEY` | Use OpenAI when there is no Anthropic key | none |
-| `LLM_MODEL` | Main model override | `claude-sonnet-4-5` / `gpt-4o` |
-| `LLM_FAST_MODEL` | Cheap model for background fact extraction | `claude-haiku-4-5` / `gpt-4o-mini` |
-| `TAVILY_API_KEY` | Search provider (recommended) | none |
-| `SERPER_API_KEY` | Search provider | none |
-| `EXA_API_KEY` | Search provider | none |
-| `KAIRO_PREFETCH` | `off` disables speculative prefetch (for latency A/B tests) | `on` |
-| `PORT` | HTTP port | `3000` |
+| Variable | Needed? | Purpose | Default |
+|---|---|---|---|
+| `ANTHROPIC_API_KEY` | **One of these two is required** | Use Anthropic (checked first) | none |
+| `OPENAI_API_KEY` | **One of these two is required** | Use OpenAI when there is no Anthropic key | none |
+| `LLM_MODEL` | optional | Main model override | `claude-sonnet-4-5` / `gpt-4o` |
+| `LLM_FAST_MODEL` | optional | Cheap model for background fact extraction | `claude-haiku-4-5` / `gpt-4o-mini` |
+| `TAVILY_API_KEY` | optional (recommended) | Search provider | none |
+| `SERPER_API_KEY` | optional | Search provider | none |
+| `EXA_API_KEY` | optional | Search provider | none |
+| `KAIRO_PREFETCH` | optional | `off` disables speculative prefetch (for latency A/B tests) | `on` |
+| `PORT` | optional | HTTP port | `3000` |
 
 **Search provider order:** Tavily, then Serper, then Exa, whichever key is present. With no search key, Kairo uses a free DuckDuckGo/Bing chain plus Jina Reader for JavaScript-heavy pages. That is fine for demos; a real key is more reliable because free endpoints can rate-limit or show CAPTCHAs.
 
@@ -108,6 +114,9 @@ On first boot an empty database is seeded with three conversations anchored to *
 | Shortlist of 5 CRM tools for a 20-person sales team | most recent Monday |
 | Hosted Llama 3.3 70B pricing question | most recent 3 November |
 | Postgres hosting comparison (Supabase, Neon, RDS, Render, Railway) | last Tuesday |
+
+> [!NOTE]
+> Sending these prompts requires the LLM key from [Quick start](#quick-start). Seeding and the timeline work without one.
 
 Click a suggestion card in the UI, or paste:
 
@@ -122,7 +131,7 @@ Click a suggestion card in the UI, or paste:
 
 ## How it works
 
-<p align="center"><img src="docs/architecture.svg" alt="Kairo architecture" width="100%"></p>
+<p align="center"><img src="docs/architecture-sketch.png" alt="Hand-sketched Kairo architecture: hydrate memory, prefetch the live web, LLM with one tool, async fact ledger" width="100%"></p>
 
 1. **Hydrate.** Dates in your message are resolved to windows, and matching past turns plus their stored facts are injected into the prompt as `<episodic_memory>`. If nothing matches, the model is told which dates *do* have history.
 2. **Prefetch** (verification questions only). When memory already names the entities, the runtime runs the batched search before the model starts and gives the model a completed tool result.
@@ -135,10 +144,10 @@ Details, decisions and rejected alternatives: [DESIGN.md](DESIGN.md).
 
 | Endpoint | Description |
 |---|---|
-| `POST /api/chat` | `{ message, sessionId?, asOf? }` → SSE events: `status`, `delta`, `sources`, `done`, `error` |
+| `POST /api/chat` | **Needs the LLM key.** `{ message, sessionId?, asOf? }` → SSE events: `status`, `delta`, `sources`, `done`, `error` |
 | `GET /api/status` | Provider, model, counts, today's date |
 | `GET /api/timeline` · `GET /api/timeline/:date` | Stored days; messages and facts for one day |
-| `POST /api/debug/context` | `{ message, asOf? }` → exactly what memory would be injected for that prompt |
+| `POST /api/debug/context` | No key needed. `{ message, asOf? }` → exactly what memory would be injected for that prompt |
 | `POST /api/seed` · `POST /api/reset` | Re-seed benchmark episodes · reset (`{ "seed": true }` to re-seed) |
 
 ## Project structure
@@ -175,12 +184,13 @@ docs/                          Logo, architecture diagrams and screenshots
 | `npm run dev` | Start with auto-reload (`tsx watch`) |
 | `npm start` | Start without watching |
 | `npm run typecheck` | `tsc --noEmit` (strict) |
-| `npm test` | Run the test suite with a scripted LLM, so it needs no keys |
+| `npm test` | Run the test suite with a scripted LLM, so it needs **no API keys** |
 
 The tests cover date resolution across several "today" values, recall for all three benchmark prompts, the one-tool guarantee, parallel search with partial failures, ranking, HTML-to-Markdown, prefetch planning and fallbacks, and the time-travel round trip.
 
 ## Limitations
 
+- Chatting needs an Anthropic or OpenAI key in `.env`; everything else (memory, timeline, seeding, tests) works without one.
 - Tests verify the plumbing, not the model's answer quality.
 - Time travel backdates **messages**, not the web: live results always reflect the real present.
 - Data lives in `./data/kairo.db`. Delete the folder, or use the reset button, to start fresh.

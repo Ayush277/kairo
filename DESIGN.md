@@ -10,7 +10,7 @@
 
 </div>
 
-<p align="center"><img src="docs/architecture.svg" alt="Kairo architecture: pre-flight hydrator, agent loop with one web_search tool, async fact extractor" width="100%"></p>
+<p align="center"><img src="docs/architecture-sketch.png" alt="Hand-sketched Kairo architecture: hydrate memory, prefetch the live web, LLM with one tool, async fact ledger" width="100%"></p>
 
 > **The one-minute version.** The challenge prompts ("On Monday we shortlisted 5 CRM tools… anything changed since?") are not searches. They are **state diffs**: *what I told you then* vs *what is true now*. Kairo remembers its past claims in SQLite, resolves "Monday / last Tuesday / 3 November" with date math, hands that memory to the model **before** it starts, and gives it a single batched `web_search` to check the present.
 
@@ -248,6 +248,7 @@ The UI shows live "status pills" (resolved dates, recalled messages, parallel se
 <details>
 <summary><b>Evaluator tooling and verification</b></summary>
 
+- **Running it:** `npm install`, copy `.env.example` to `.env`, put **one LLM key** in it (`ANTHROPIC_API_KEY` or `OPENAI_API_KEY`), then `npm run dev`. A search key is optional. Without an LLM key the app starts but cannot answer; memory, timeline and tests still work.
 - **Benchmark seeder:** on first boot, plants three conversations anchored to *today's* calendar (last Monday: 5 CRM tools · most recent 3 November: hosted-LLM pricing · last Tuesday: Postgres hosting) with fact snapshots, so the challenge prompts work on any date. Prices are illustrative baselines for the "then" side.
 - **Timeline & Seed Manager** (`Cmd/Ctrl+K`): browse stored days and facts, simulate sending a message *as of* a past date, re-seed, reset. `POST /api/debug/context` prints exactly what memory would be injected for a prompt.
 - **Tests (33, no API key needed):** prefetch planning and fallbacks (named vendor, pure recall, empty/failed search);  resolver across several "today" values including Monday/Tuesday/Wednesday edge cases; the three benchmark prompts recall the right episode; same-date collision; FTS safety; one-tool guarantee; unknown-tool rejection; parallel search with partial failure; ranking; HTML → Markdown; time-travel round trip. They use a scripted LLM, so they verify the plumbing, not model quality.

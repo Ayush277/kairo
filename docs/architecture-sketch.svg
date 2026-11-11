@@ -1,0 +1,151 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 820" font-family="'Bradley Hand','Marker Felt','Segoe Print','Comic Sans MS',cursive">
+  <defs>
+    <!-- wobble: turns clean vectors into hand-drawn strokes -->
+    <filter id="rough" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="3" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="6" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="rough2" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.022" numOctaves="3" seed="21" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="5" xChannelSelector="G" yChannelSelector="R"/>
+    </filter>
+    <radialGradient id="paper" cx="50%" cy="40%" r="80%"><stop offset="0" stop-color="#15120a"/><stop offset="1" stop-color="#070605"/></radialGradient>
+    <pattern id="dots" width="26" height="26" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.1" fill="#2a2412"/></pattern>
+  </defs>
+
+  <rect width="1400" height="820" rx="26" fill="url(#paper)"/>
+  <rect width="1400" height="820" rx="26" fill="url(#dots)"/>
+
+  <!-- title -->
+  <text x="700" y="64" text-anchor="middle" font-size="44" fill="#ffe27a" font-weight="700">How Kairo answers one question</text>
+  <g filter="url(#rough)" fill="none" stroke="#f5c518" stroke-width="3" stroke-linecap="round">
+    <path d="M430 84 C 560 100, 700 72, 970 90"/>
+  </g>
+
+  <!-- ===== sketch shapes (wobbly) ===== -->
+  <g filter="url(#rough)" fill="none" stroke="#f5c518" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+    <!-- you -->
+    <rect x="36" y="236" width="200" height="170" rx="26"/>
+    <!-- 1 hydrate -->
+    <rect x="296" y="130" width="300" height="340" rx="26"/>
+    <!-- 2 search -->
+    <rect x="656" y="130" width="300" height="340" rx="26" stroke="#fff1b8"/>
+    <!-- 3 llm -->
+    <rect x="1016" y="130" width="350" height="210" rx="26"/>
+    <!-- answer -->
+    <rect x="1016" y="380" width="350" height="104" rx="26" stroke="#fff1b8"/>
+    <!-- 4 ledger -->
+    <rect x="330" y="580" width="420" height="160" rx="26" stroke="#ff9f1c" stroke-dasharray="3 0"/>
+    <!-- db cylinder -->
+    <ellipse cx="130" cy="590" rx="78" ry="22"/>
+    <path d="M52 590 V690 C52 716, 208 716, 208 690 V590"/>
+    <path d="M52 640 C52 664, 208 664, 208 640"/>
+    <!-- web cloud -->
+    <path d="M900 700 C860 700, 850 650, 892 640 C892 590, 960 580, 988 616 C1020 574, 1100 586, 1106 636 C1160 626, 1190 686, 1140 704 C1130 722, 900 726, 900 700 Z" stroke="#fff1b8"/>
+  </g>
+  <!-- second pass of the same boxes, offset: gives the double-line sketch feel -->
+  <g filter="url(#rough2)" fill="none" stroke="#f5c518" stroke-width="1.4" stroke-linecap="round" opacity="0.55">
+    <rect x="38" y="240" width="198" height="168" rx="26"/>
+    <rect x="298" y="134" width="298" height="338" rx="26"/>
+    <rect x="658" y="134" width="298" height="338" rx="26"/>
+    <rect x="1018" y="134" width="348" height="208" rx="26"/>
+    <rect x="1018" y="384" width="348" height="102" rx="26"/>
+    <rect x="332" y="584" width="418" height="158" rx="26"/>
+  </g>
+
+  <!-- ===== arrows ===== -->
+  <g filter="url(#rough)" fill="none" stroke="#ffe27a" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M240 318 C 262 312, 276 322, 292 318"/><path d="M276 304 L292 318 L274 332"/>
+    <path d="M600 300 C 622 294, 636 304, 652 300"/><path d="M636 286 L652 300 L634 314"/>
+    <path d="M960 236 C 982 230, 996 240, 1012 236"/><path d="M996 222 L1012 236 L994 250"/>
+    <path d="M1190 346 C 1186 360, 1194 372, 1190 378"/><path d="M1176 364 L1190 378 L1204 364"/>
+  </g>
+  <!-- hydrate reads the DB -->
+  <g filter="url(#rough)" fill="none" stroke="#f5c518" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M330 474 C 290 520, 230 548, 196 570"/><path d="M202 548 L196 570 L220 572"/>
+  </g>
+  <!-- ledger writes the DB (async, dashed) -->
+  <g filter="url(#rough)" fill="none" stroke="#ff9f1c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="10 9">
+    <path d="M326 662 C 290 664, 250 664, 214 662"/>
+    <path d="M232 648 L212 662 L234 676" stroke-dasharray="0"/>
+  </g>
+  <!-- search ↔ web -->
+  <g filter="url(#rough)" fill="none" stroke="#fff1b8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M806 476 C 830 530, 900 590, 960 612"/><path d="M938 592 L960 612 L934 620"/>
+  </g>
+
+  <!-- ===== text ===== -->
+  <g fill="#f7e7a8" font-size="25">
+    <!-- you -->
+    <text x="136" y="272" text-anchor="middle" font-size="30" font-weight="700" fill="#ffe27a">You</text>
+    <text x="136" y="312" text-anchor="middle" font-size="21">"On Monday we</text>
+    <text x="136" y="340" text-anchor="middle" font-size="21">shortlisted 5 CRMs…</text>
+    <text x="136" y="368" text-anchor="middle" font-size="21">anything changed</text>
+    <text x="136" y="396" text-anchor="middle" font-size="21">since?"</text>
+
+    <!-- 1 -->
+    <text x="446" y="172" text-anchor="middle" font-size="22" fill="#f5c518" font-weight="700">STEP 1 · before the model</text>
+    <text x="446" y="210" text-anchor="middle" font-size="30" font-weight="700" fill="#ffe27a">Hydrate memory</text>
+    <text x="320" y="262" font-size="23">• resolve dates:</text>
+    <text x="344" y="292" font-size="21" fill="#b8a66c">"Monday" → 9 Nov</text>
+    <text x="320" y="334" font-size="23">• recall that day's turns</text>
+    <text x="320" y="376" font-size="23">• attach fact snapshots</text>
+    <text x="344" y="406" font-size="21" fill="#b8a66c">(what I claimed, + source)</text>
+    <text x="446" y="448" text-anchor="middle" font-size="20" fill="#ffe27a">→ &lt;episodic_memory&gt; block</text>
+
+    <!-- 2 -->
+    <text x="806" y="172" text-anchor="middle" font-size="20" fill="#fff1b8" font-weight="700">STEP 2 · speculative prefetch</text>
+    <text x="806" y="210" text-anchor="middle" font-size="30" font-weight="700" fill="#fff1b8">Check the live web</text>
+    <text x="680" y="262" font-size="23">• 1 query per remembered</text>
+    <text x="704" y="290" font-size="23">entity, run in parallel</text>
+    <text x="680" y="332" font-size="23">• rank: official pages</text>
+    <text x="704" y="360" font-size="23">beat listicles</text>
+    <text x="680" y="402" font-size="23">• read pricing pages,</text>
+    <text x="704" y="430" font-size="23">keep the tables</text>
+    <text x="806" y="460" text-anchor="middle" font-size="19" fill="#b8a66c">saves one model round trip</text>
+
+    <!-- 3 -->
+    <text x="1191" y="172" text-anchor="middle" font-size="22" fill="#f5c518" font-weight="700">STEP 3 · streamed</text>
+    <text x="1191" y="210" text-anchor="middle" font-size="30" font-weight="700" fill="#ffe27a">LLM + ONE tool</text>
+    <text x="1191" y="252" text-anchor="middle" font-size="23">only tool offered:</text>
+    <text x="1191" y="288" text-anchor="middle" font-size="27" fill="#ffe27a" font-weight="700">web_search</text>
+    <text x="1191" y="322" text-anchor="middle" font-size="19" fill="#b8a66c">can search again for gaps</text>
+
+    <!-- answer -->
+    <text x="1191" y="426" text-anchor="middle" font-size="28" font-weight="700" fill="#fff1b8">Then vs Now</text>
+    <text x="1191" y="460" text-anchor="middle" font-size="21">table + verdict + [Source] links</text>
+
+    <!-- ledger -->
+    <text x="540" y="622" text-anchor="middle" font-size="22" fill="#ff9f1c" font-weight="700">STEP 4 · async, after the answer</text>
+    <text x="540" y="664" text-anchor="middle" font-size="30" font-weight="700" fill="#ffd58a">Fact ledger</text>
+    <text x="540" y="700" text-anchor="middle" font-size="21">cheap model extracts new claims</text>
+    <text x="540" y="726" text-anchor="middle" font-size="21" fill="#b8a66c">→ tomorrow's "then" · zero latency</text>
+
+    <!-- db -->
+    <text x="130" y="750" text-anchor="middle" font-size="24" font-weight="700" fill="#ffe27a">SQLite memory</text>
+    <text x="130" y="778" text-anchor="middle" font-size="18" fill="#b8a66c">days · FTS5 · facts</text>
+    <text x="130" y="624" text-anchor="middle" font-size="19" fill="#b8a66c">messages</text>
+    <text x="130" y="676" text-anchor="middle" font-size="19" fill="#b8a66c">fact_snapshots</text>
+
+    <!-- web -->
+    <text x="1000" y="664" text-anchor="middle" font-size="28" font-weight="700" fill="#fff1b8">the live web</text>
+    <text x="1000" y="772" text-anchor="middle" font-size="19" fill="#b8a66c">Tavily · Serper · Exa · or no key</text>
+
+    <!-- labels on arrows -->
+    <text x="258" y="520" font-size="19" fill="#b8a66c" transform="rotate(-24 258 520)">reads</text>
+    <text x="268" y="634" font-size="19" fill="#ff9f1c" text-anchor="middle">writes</text>
+    <text x="778" y="548" font-size="19" fill="#fff1b8" transform="rotate(32 778 548)">web_search</text>
+  </g>
+
+  <!-- key doodle: where the API key is needed -->
+  <g transform="translate(46,-6)">
+    <g filter="url(#rough)" fill="none" stroke="#ffe27a" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="1252" cy="566" r="22"/>
+      <path d="M1268 582 L1330 644"/><path d="M1306 620 L1320 606"/><path d="M1318 632 L1332 618"/>
+    </g>
+    <text x="1262" y="524" text-anchor="middle" font-size="22" fill="#ffe27a" font-weight="700">needs your key</text>
+  </g>
+  <text x="1288" y="696" font-size="18" fill="#f7e7a8" text-anchor="middle">ANTHROPIC_API_KEY</text>
+  <text x="1288" y="720" font-size="18" fill="#f7e7a8" text-anchor="middle">or OPENAI_API_KEY</text>
+  <text x="1288" y="748" font-size="18" fill="#b8a66c" text-anchor="middle">→ put it in .env</text>
+</svg>
